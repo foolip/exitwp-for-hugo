@@ -5,6 +5,7 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, tzinfo
+from dateutil import tz
 from glob import glob
 from urllib import urlretrieve
 from urlparse import urljoin, urlparse
@@ -156,6 +157,7 @@ def parse_wp_xml(file):
                 'link': gi('link'),
                 'author': gi('dc:creator'),
                 'date': gi('wp:post_date_gmt'),
+                'date_local': gi('wp:post_date'),
                 'slug': gi('wp:post_name'),
                 'status': gi('wp:status'),
                 'type': gi('wp:post_type'),
@@ -289,14 +291,17 @@ def write_jekyll(data, target_format):
         sys.stdout.write('.')
         sys.stdout.flush()
         out = None
-		
+
         item_url = urlparse(i['link'])        # AW!!: Store item url for later url path relative
+        date = datetime.strptime(i['date'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=UTC())
+        date_local = datetime.strptime(i['date_local'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=UTC())
+        date_delta = date_local - date
+        date_local = date_local.replace(tzinfo=tz.tzoffset('DUMMY', date_delta))
         yaml_header = {
             'title': i['title'],
             'url': item_url.path,             # AW!!: Renamed: link (Jekykll) -> url and and make url path relative
             'author': i['author'],
-            'date': datetime.strptime(
-                i['date'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=UTC())
+            'date': date_local,
             #'slug': i['slug'],               # AW!!: can be used
             #'wordpress_id': int(i['wp_id']), # AW!!: not used
             #'comments': i['comments'],       # AW!!: Via Disqus
